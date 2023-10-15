@@ -1,6 +1,6 @@
 *.iml
 .gradle
-vcs.*
+vcs.xml
 
 /local.properties
 /.idea/caches
