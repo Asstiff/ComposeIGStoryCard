@@ -111,7 +111,7 @@ fun AnimatedImagePageItem(
                 .alpha(imageAlphaAnimationValue.value)
             ,
             contentDescription = "",
-            contentScale = ContentScale.FillHeight
+            contentScale = ContentScale.Crop
         )
     }
 }

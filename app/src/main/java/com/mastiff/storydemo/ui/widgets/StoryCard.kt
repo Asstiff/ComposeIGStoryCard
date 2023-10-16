@@ -1,10 +1,20 @@
 package com.mastiff.storydemo.ui.widgets
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.with
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -14,36 +24,48 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.mastiff.storydemo.classes.Image
 import kotlinx.coroutines.launch
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 
 @Composable
-fun StoryCard(modifier: Modifier = Modifier, images: Array<String>) {
+fun StoryCard(modifier: Modifier = Modifier, images: Array<Image>) {
     val currentPage = remember { mutableStateOf(0) }
+    val currentImage =  remember { derivedStateOf { images[if(currentPage.value < images.size) currentPage.value else currentPage.value - 1] } }
+
     val previousPage = remember { mutableStateOf(0) }
+
+    val animationPlay = remember { mutableStateOf(true) }
+
     val interactionSource = remember { MutableInteractionSource() }
 
     val indicatorProgressAnimationValue = remember { Animatable(0f) }
 
     val coroutine = rememberCoroutineScope()
 
-    LaunchedEffect(currentPage.value) {
+    LaunchedEffect(currentPage.value, animationPlay.value) {
         launch {
             indicatorProgressAnimationValue.animateTo(
                 targetValue = 1f,
                 animationSpec = tween(5000, easing = CubicBezierEasing(0f, 0.25f, 1f, 0.75f))
             )
-            indicatorProgressAnimationValue.snapTo(0f)
+            if (!animationPlay.value){
+                indicatorProgressAnimationValue.snapTo(0f)
+            }
             if (currentPage.value < images.size) {
                 previousPage.value = currentPage.value
                 currentPage.value += 1
@@ -57,11 +79,11 @@ fun StoryCard(modifier: Modifier = Modifier, images: Array<String>) {
             .background(Color.LightGray)
     )
     {
+        AnimatedFloatingText(currentImage, currentPage, previousPage, images.size)
 
-
-        images.forEachIndexed { index, url ->
+        images.forEachIndexed { index, image ->
             AnimatedImagePageItem(
-                url, currentPage, previousPage, index, images.size
+                image.url, currentPage, previousPage, index, images.size
             )
         }
         ReplayPageItem(
@@ -96,17 +118,27 @@ fun StoryCard(modifier: Modifier = Modifier, images: Array<String>) {
                         interactionSource = interactionSource,
                         indication = null,
                         onClick = {
-                            coroutine.launch {
-                                indicatorProgressAnimationValue.snapTo(0f)
-                            }
-                            previousPage.value = currentPage.value
-                            if (currentPage.value != images.size) {
-                                currentPage.value += 1
-                            } else {
-                                currentPage.value = 0
-                            }
+
                         }
                     )
+                    .pointerInput(Unit){
+                        detectTapGestures(
+                            onTap = {
+                                coroutine.launch {
+                                    indicatorProgressAnimationValue.snapTo(0f)
+                                }
+                                previousPage.value = currentPage.value
+                                if (currentPage.value != images.size) {
+                                    currentPage.value += 1
+                                } else {
+                                    currentPage.value = 0
+                                }
+                            },
+                            onLongPress = {
+
+                            }
+                        )
+                    }
                     .zIndex(1000f)
             )
         }
