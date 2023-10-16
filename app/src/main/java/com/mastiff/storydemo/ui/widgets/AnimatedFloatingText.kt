@@ -58,7 +58,7 @@ fun AnimatedFloatingText(
                 floatingTextTitleScaleValue.snapTo(0f)
                 floatingTextTitleScaleValue.animateTo(
                     1f,
-                    animationSpec = tween(1000, easing = CubicBezierEasing(0f, 1.3f, 0.2f, 1f))
+                    animationSpec = tween(900, easing = CubicBezierEasing(0f, 1.25f, 0.2f, 1f))
                 )
             }
             launch {

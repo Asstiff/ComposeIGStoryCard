@@ -1,5 +1,6 @@
 package com.mastiff.storydemo.ui.widgets
 
+import android.view.MotionEvent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -16,6 +17,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -28,20 +30,32 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.mastiff.storydemo.classes.Image
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun StoryCard(modifier: Modifier = Modifier, images: Array<Image>) {
     val currentPage = remember { mutableStateOf(0) }
@@ -57,15 +71,16 @@ fun StoryCard(modifier: Modifier = Modifier, images: Array<Image>) {
 
     val coroutine = rememberCoroutineScope()
 
-    LaunchedEffect(currentPage.value, animationPlay.value) {
+    var pausedProgress by remember { mutableStateOf(0f) }
+    var pausedVelocity by remember { mutableStateOf(0f) }
+
+    LaunchedEffect(currentPage.value) {
         launch {
             indicatorProgressAnimationValue.animateTo(
                 targetValue = 1f,
                 animationSpec = tween(5000, easing = CubicBezierEasing(0f, 0.25f, 1f, 0.75f))
             )
-            if (!animationPlay.value){
-                indicatorProgressAnimationValue.snapTo(0f)
-            }
+            indicatorProgressAnimationValue.snapTo(0f)
             if (currentPage.value < images.size) {
                 previousPage.value = currentPage.value
                 currentPage.value += 1
@@ -90,6 +105,41 @@ fun StoryCard(modifier: Modifier = Modifier, images: Array<Image>) {
             currentPage, previousPage, images.size
         )
 
+        fun onShortPress() {
+            coroutine.launch {
+                indicatorProgressAnimationValue.snapTo(0f)
+            }
+            previousPage.value = currentPage.value
+            if (currentPage.value != images.size) {
+                currentPage.value += 1
+            } else {
+                currentPage.value = 0
+            }
+        }
+
+        suspend fun onLongPress() {
+            pausedProgress = indicatorProgressAnimationValue.value
+            pausedVelocity = indicatorProgressAnimationValue.velocity
+            indicatorProgressAnimationValue.stop() // 暂停动画
+        }
+
+        fun onLongPressRelease() {
+            coroutine.launch {
+                indicatorProgressAnimationValue.animateTo(
+                    targetValue = 1f,
+                    initialVelocity = pausedVelocity,
+                    animationSpec = tween(
+                        durationMillis = ((1f - pausedProgress) * 5000).toInt(),
+                        easing = CubicBezierEasing(0f, 0.25f, 1f, 0.75f)
+                    )
+                )
+                indicatorProgressAnimationValue.snapTo(0f)
+                if (currentPage.value < images.size) {
+                    previousPage.value = currentPage.value
+                    currentPage.value += 1
+                }
+            }
+        }
         // 触控事件处理者
         Row(modifier = Modifier.fillMaxSize()) {
             Box(
@@ -110,6 +160,35 @@ fun StoryCard(modifier: Modifier = Modifier, images: Array<Image>) {
                     )
                     .zIndex(1000f)
             )
+
+            val interactionSource = remember { MutableInteractionSource() }
+            var isLongPress by remember { mutableStateOf(false) }
+            var pressedJob by remember { mutableStateOf<Job?>(null) }
+
+            LaunchedEffect(interactionSource) {
+                interactionSource.interactions.collect { interaction ->
+                    when (interaction) {
+                        is PressInteraction.Press -> {
+                            isLongPress = false
+                            pressedJob = launch {
+                                delay(300)
+                                if (isActive) {
+                                    isLongPress = true
+                                    onLongPress()
+                                }
+                            }
+                        }
+                        is PressInteraction.Release -> {
+                            pressedJob?.cancel(CancellationException("Released"))
+                            if (isLongPress) {
+                                onLongPressRelease()
+                            } else {
+                                onShortPress()
+                            }
+                        }
+                    }
+                }
+            }
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
@@ -121,23 +200,26 @@ fun StoryCard(modifier: Modifier = Modifier, images: Array<Image>) {
 
                         }
                     )
-                    .pointerInput(Unit){
-                        detectTapGestures(
-                            onTap = {
-                                coroutine.launch {
-                                    indicatorProgressAnimationValue.snapTo(0f)
-                                }
-                                previousPage.value = currentPage.value
-                                if (currentPage.value != images.size) {
-                                    currentPage.value += 1
-                                } else {
-                                    currentPage.value = 0
-                                }
-                            },
-                            onLongPress = {
 
+                    .pointerInteropFilter { event ->
+                        when (event.action) {
+                            MotionEvent.ACTION_DOWN -> {
+                                val offset = Offset(event.x, event.y)
+                                interactionSource.tryEmit(PressInteraction.Press(offset))
                             }
-                        )
+
+                            MotionEvent.ACTION_UP -> {
+                                val offset = Offset(event.x, event.y)
+                                interactionSource.tryEmit(
+                                    PressInteraction.Release(
+                                        PressInteraction.Press(
+                                            offset
+                                        )
+                                    )
+                                )
+                            }
+                        }
+                        true
                     }
                     .zIndex(1000f)
             )

@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         StoryCard(
                             modifier = Modifier
-                                .height(240.dp)
+                                .height(440.dp)
                                 .fillMaxWidth(),
                             images = arrayOf(
                                 Image("https://images.pexels.com/photos/3565742/pexels-photo-3565742.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2", "https://images.pexels.com/photos/3565742/pexels-photo-3565742.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2", "Mastiff", "Snow House", "这是一个被雪覆盖的小屋，在冬季的寒风和白雪中显得尤为温暖和宁静。人们在这里度过一个平和的冬夜，享受着火炉和热茶带来的温暖。"),
