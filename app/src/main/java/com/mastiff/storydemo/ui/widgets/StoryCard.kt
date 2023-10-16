@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -55,16 +54,19 @@ fun StoryCard(modifier: Modifier = Modifier, images: Array<String>) {
     Box(
         modifier = modifier
             .clip(AbsoluteSmoothCornerShape(18.dp, 60, 18.dp, 60, 18.dp, 60, 18.dp, 60))
-            .background(Color.Gray)
+            .background(Color.LightGray)
     )
     {
+
 
         images.forEachIndexed { index, url ->
             AnimatedImagePageItem(
                 url, currentPage, previousPage, index, images.size
             )
-
         }
+        ReplayPageItem(
+            currentPage, previousPage, images.size
+        )
 
         // 触控事件处理者
         Row(modifier = Modifier.fillMaxSize()) {
@@ -98,10 +100,9 @@ fun StoryCard(modifier: Modifier = Modifier, images: Array<String>) {
                                 indicatorProgressAnimationValue.snapTo(0f)
                             }
                             previousPage.value = currentPage.value
-                            if (currentPage.value != images.size){
+                            if (currentPage.value != images.size) {
                                 currentPage.value += 1
-                            }
-                            else{
+                            } else {
                                 currentPage.value = 0
                             }
                         }
@@ -121,9 +122,9 @@ fun StoryCard(modifier: Modifier = Modifier, images: Array<String>) {
                 Box(
                     Modifier
                         .weight(1f)
-                        .padding(horizontal = 4.dp)
-                        .height(4.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .padding(horizontal = 2.dp)
+                        .height(2.dp)
+                        .clip(RoundedCornerShape(2.dp))
                         .background(Color(0x68f3f3f3))
                 ) {
                     Box(
@@ -139,10 +140,5 @@ fun StoryCard(modifier: Modifier = Modifier, images: Array<String>) {
                 }
             }
         }
-
-
-
-
-        Text(text = currentPage.value.toString())
     }
 }

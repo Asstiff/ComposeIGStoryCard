@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import kotlinx.coroutines.CoroutineScope
@@ -35,12 +36,18 @@ fun AnimatedImagePageItem(
         fun animateValue(
             coroutineScope: CoroutineScope,
             animatable: Animatable<Float, *>,
+            isForward: Boolean,
             startValue: Float,
             endValue: Float
         ) {
             coroutineScope.launch {
                 animatable.snapTo(startValue)
-                animatable.animateTo(endValue, animationSpec = tween(500, easing = CubicBezierEasing(0.25f, 0f, 0f, 1f)))
+                if (isForward){
+                    animatable.animateTo(endValue, animationSpec = tween(800, easing = CubicBezierEasing(0.25f, 0f, 0f, 1f)))
+                }
+                else{
+                    animatable.animateTo(endValue, animationSpec = tween(600, easing = CubicBezierEasing(0f, 1f, 0f, 1f)))
+                }
             }
         }
 
@@ -71,16 +78,23 @@ fun AnimatedImagePageItem(
             }
 
             if (index != maxCount) {
-                animateValue(coroutineScope, imageBlurAnimationValue, blurStart, blurEnd)
+                animateValue(
+                    coroutineScope,
+                    imageBlurAnimationValue,
+                    isForward,
+                    blurStart,
+                    blurEnd)
                 animateValue(
                     coroutineScope,
                     imageScaleAnimationValue,
+                    isForward,
                     scaleStart,
                     scaleEnd
                 )
                 animateValue(
                     coroutineScope,
                     imageAlphaAnimationValue,
+                    isForward,
                     alphaStart,
                     alphaEnd
                 )
@@ -96,7 +110,8 @@ fun AnimatedImagePageItem(
                 .scale(imageScaleAnimationValue.value)
                 .alpha(imageAlphaAnimationValue.value)
             ,
-            contentDescription = ""
+            contentDescription = "",
+            contentScale = ContentScale.FillHeight
         )
     }
 }

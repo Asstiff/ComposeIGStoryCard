@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">StoryDemo</string>
+    <string name="REPLAY_BUTTON">REPLAY</string>
 </resources>
